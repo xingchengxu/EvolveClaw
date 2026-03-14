@@ -10,6 +10,7 @@ from evolveclaw_ramsey.harness import checkpoint
 from evolveclaw_ramsey.harness.evaluator import Evaluator
 from evolveclaw_ramsey.harness.executor import Executor
 from evolveclaw_ramsey.harness.recorder import Recorder
+from evolveclaw_ramsey.harness.stats import RunStats
 from evolveclaw_ramsey.ramsey.scoring import RamseyScorer
 from evolveclaw_ramsey.ramsey.strategies import RandomStrategy, PaleyStrategy, CyclicStrategy, Strategy
 from evolveclaw_ramsey.utils.logging import setup_logging, get_logger
@@ -88,17 +89,22 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
     ckpt_interval = config["evolution"]["checkpoint_interval"]
 
     gen = start_gen
+    last_error = None
+    run_stats = RunStats()
     for gen in range(start_gen, max_gen):
         parent, parent_score = population.tournament_select(tournament_k, rng)
-        candidate = proposer.propose([parent], [parent_score], config["problem"])
+        candidate = proposer.propose([parent], [parent_score], config["problem"], last_error=last_error)
         exec_result = executor.execute(candidate, n)
         if exec_result.error:
+            last_error = exec_result.error
             recorder.log_error(gen, exec_result.error)
             logger.debug(f"Gen {gen}: execution error: {exec_result.error}")
             continue
+        last_error = None
         score_result = scorer.score(exec_result.graph)
         added = population.add(candidate, score_result.score)
-        recorder.log_generation(gen, candidate, score_result, added)
+        gen_stats = run_stats.record(gen, population.scores(), population.strategy_names())
+        recorder.log_generation(gen, candidate, score_result, added, extra=run_stats.to_dict())
         current_best_strat, current_best_score = population.best()
         if score_result.score > best_score:
             best_score = score_result.score

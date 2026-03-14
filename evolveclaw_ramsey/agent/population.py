@@ -43,6 +43,14 @@ class Population:
     def size(self) -> int:
         return len(self._members)
 
+    def scores(self) -> list[float]:
+        """Return all scores in the population (best-first order)."""
+        return [score for _, score in self._members]
+
+    def strategy_names(self) -> list[str]:
+        """Return all strategy names in the population."""
+        return [s.name for s, _ in self._members]
+
     def to_dict(self) -> dict:
         return {
             "max_size": self.max_size,

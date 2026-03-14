@@ -85,6 +85,14 @@ def cmd_replay(args):
     summary_path = run_dir / "summary.txt"
     if summary_path.exists():
         print(f"\n{summary_path.read_text()}")
+    if getattr(args, "plot", False):
+        from evolveclaw_ramsey.harness.visualize import ascii_plot, matplotlib_plot
+        print(f"\n{ascii_plot(str(run_dir))}")
+        img_path = matplotlib_plot(str(run_dir))
+        if img_path:
+            print(f"\nPlot saved to: {img_path}")
+        else:
+            print("\n(matplotlib not installed, ASCII plot only)")
 
 def main():
     parser = argparse.ArgumentParser(prog="evolveclaw-ramsey",
@@ -100,6 +108,7 @@ def main():
     eval_parser.add_argument("--t", type=int, required=True, help="Clique size t")
     replay_parser = subparsers.add_parser("replay", help="Replay a past run")
     replay_parser.add_argument("--run-dir", required=True, help="Path to run directory")
+    replay_parser.add_argument("--plot", action="store_true", help="Show score evolution plot")
     args = parser.parse_args()
     if args.command == "run":
         cmd_run(args)
