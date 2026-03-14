@@ -322,46 +322,64 @@ python -m evolveclaw_ramsey.cli replay <run_dir> --plot
 
 ```
 evolveclaw_ramsey/
-  __init__.py
-  __main__.py
-  cli.py                    # CLI entry point (run / eval / replay)
-  ramsey/                   # Domain layer: Ramsey graph theory
-    graph_repr.py            # Adjacency matrix utilities (validate, complement, edge list)
-    scoring.py               # Monochromatic clique violation counter
-    strategies.py            # Graph construction strategies (Random, Paley, Cyclic, Perturbed)
-  agent/                    # Agent layer: evolutionary search logic
-    population.py            # Ranked population with deduplication and tournament selection
-    proposer.py              # Strategy proposers (RandomMutation, LLM with Anthropic/OpenAI)
-    loop.py                  # Main evolution loop with checkpoint/resume
-  harness/                  # Harness layer: operational infrastructure
-    executor.py              # Subprocess execution with timeout and validation
-    evaluator.py             # Strategy evaluation pipeline
-    recorder.py              # JSONL logging, best.json tracking, summary generation
-    checkpoint.py            # Population + RNG state serialization
-    stats.py                 # Per-generation convergence statistics
-    visualize.py             # ASCII score plots and matplotlib visualization
-  utils/                    # Shared utilities
-    config.py                # YAML config loading with deep-merge defaults
-    logging.py               # Logging setup (console + file)
+  cli.py
+  ramsey/
+    graph_repr.py
+    scoring.py
+    strategies.py
+  agent/
+    population.py
+    proposer.py
+    loop.py
+  harness/
+    executor.py
+    evaluator.py
+    recorder.py
+    checkpoint.py
+    stats.py
+    visualize.py
+  utils/
+    config.py
+    logging.py
 configs/
-  demo.yaml                  # Quick demo: R(4,4) with n=17, 100 generations
-  llm_demo.yaml              # LLM proposer configuration
+  demo.yaml
+  llm_demo.yaml
 scripts/
-  run_demo.sh                # Quick demo launcher
-  run_search.sh              # Full search launcher
+  run_demo.sh
+  run_search.sh
 research/
-  notes.md                   # Research notes on AlphaEvolve and Ramsey theory
-  sources.md                 # Reference links and bibliography
-  tests/                      # pytest suite covering core behavior and edge cases
-  test_graph_repr.py          test_population.py
-  test_scoring.py             test_proposer.py
-  test_strategies.py          test_recorder.py
-  test_evaluator.py           test_stats.py
-  test_executor.py            test_checkpoint.py
-  test_loop.py                test_config.py
-  test_cli.py                 test_logging.py
-  test_visualize.py
+  notes.md
+  sources.md
+tests/
+  test_*.py
+runs/
+  YYYYMMDD_HHMMSS_<name>/
+    log.jsonl
+    best.json
+    summary.txt
+    config.yaml
+    checkpoints/
 ```
+
+| Path | Role |
+|------|------|
+| `evolveclaw_ramsey/ramsey/` | Domain logic: graph representation, clique scoring, and strategy definitions. |
+| `evolveclaw_ramsey/agent/` | Search logic: population management, proposer behavior, and the evolution loop. |
+| `evolveclaw_ramsey/harness/` | Runtime infrastructure: execution, evaluation, logging, checkpoints, stats, and visualization. |
+| `evolveclaw_ramsey/utils/` | Shared helpers for config loading and logging setup. |
+| `configs/` | Example YAML configs for random and LLM-driven runs. |
+| `scripts/` | Convenience launchers for demo and longer search runs. |
+| `research/` | Notes and source references behind the project design. |
+| `tests/` | Pytest coverage for CLI, loop behavior, strategies, harness components, and config handling. |
+| `runs/` | Generated output directories containing logs, summaries, best candidates, and checkpoints. |
+
+High-signal files:
+
+- `evolveclaw_ramsey/cli.py`: command-line entry point
+- `evolveclaw_ramsey/agent/proposer.py`: random and LLM proposer implementations
+- `evolveclaw_ramsey/agent/loop.py`: main search loop
+- `evolveclaw_ramsey/harness/recorder.py`: run artifact generation
+- `configs/llm_demo.yaml`: fastest way to inspect the real LLM path
 
 ## Technical Details
 
