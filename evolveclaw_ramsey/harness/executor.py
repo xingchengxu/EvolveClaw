@@ -19,16 +19,20 @@ class Executor:
 
     def execute(self, strategy: Strategy, n: int) -> ExecutionResult:
         start = time.monotonic()
+        pool = ThreadPoolExecutor(max_workers=1)
         try:
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(strategy.construct, n)
+            future = pool.submit(strategy.construct, n)
+            try:
                 graph = future.result(timeout=self.timeout_seconds)
-        except FuturesTimeoutError:
-            elapsed = time.monotonic() - start
-            return ExecutionResult(graph=None, elapsed_seconds=elapsed, error="Timeout")
-        except Exception as e:
-            elapsed = time.monotonic() - start
-            return ExecutionResult(graph=None, elapsed_seconds=elapsed, error=str(e))
+            except FuturesTimeoutError:
+                future.cancel()
+                elapsed = time.monotonic() - start
+                return ExecutionResult(graph=None, elapsed_seconds=elapsed, error="Timeout")
+            except Exception as e:
+                elapsed = time.monotonic() - start
+                return ExecutionResult(graph=None, elapsed_seconds=elapsed, error=str(e))
+        finally:
+            pool.shutdown(wait=False)
         elapsed = time.monotonic() - start
         if not isinstance(graph, np.ndarray):
             return ExecutionResult(graph=None, elapsed_seconds=elapsed, error="Output is not ndarray")

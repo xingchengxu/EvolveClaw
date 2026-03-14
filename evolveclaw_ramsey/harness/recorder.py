@@ -7,12 +7,19 @@ from evolveclaw_ramsey.ramsey.scoring import ScoreResult
 from evolveclaw_ramsey.ramsey.strategies import Strategy
 
 class Recorder:
-    def __init__(self, run_dir: str):
+    def __init__(self, run_dir: str, resume: bool = False):
         self.run_dir = Path(run_dir)
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self._log_path = self.run_dir / "log.jsonl"
         self._best_path = self.run_dir / "best.json"
         self._best_score: float | None = None
+        if resume and self._best_path.exists():
+            try:
+                with open(self._best_path) as f:
+                    data = json.load(f)
+                self._best_score = data.get("score")
+            except (json.JSONDecodeError, KeyError):
+                pass
 
     def save_config(self, config: dict) -> None:
         with open(self.run_dir / "config.yaml", "w") as f:

@@ -5,14 +5,25 @@ from evolveclaw_ramsey.ramsey.strategies import RandomStrategy, CyclicStrategy
 
 
 def test_deduplication_rejects_identical_strategy():
-    """Adding a strategy with the same params_key is rejected."""
+    """Adding the same strategy object twice is rejected (same params_key)."""
+    rng = np.random.default_rng(42)
+    pop = Population(max_size=5)
+    s1 = RandomStrategy(edge_prob=0.5, rng=rng)
+    assert pop.add(s1, 10.0) is True
+    # Same object added again — same params_key including seed
+    assert pop.add(s1, 12.0) is False
+    assert pop.size() == 1
+
+
+def test_different_seeds_are_distinct():
+    """Two strategies with same edge_prob but different seeds are distinct individuals."""
     rng = np.random.default_rng(42)
     pop = Population(max_size=5)
     s1 = RandomStrategy(edge_prob=0.5, rng=rng)
     s2 = RandomStrategy(edge_prob=0.5, rng=rng)
     assert pop.add(s1, 10.0) is True
-    assert pop.add(s2, 12.0) is False
-    assert pop.size() == 1
+    assert pop.add(s2, 12.0) is True
+    assert pop.size() == 2
 
 
 def test_eviction_replaces_worst():

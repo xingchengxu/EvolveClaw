@@ -58,9 +58,6 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
                          penalty_weight=config["problem"].get("penalty_weight", 1.0))
     executor = Executor(config["executor"]["timeout_seconds"])
     evaluator = Evaluator(scorer=scorer, executor=executor)
-    recorder = Recorder(run_dir)
-    recorder.save_config(config)
-    proposer = create_proposer(config["proposer"], rng)
 
     start_gen = 0
     population = Population(config["evolution"]["population_size"])
@@ -68,12 +65,20 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
     if resume_dir:
         try:
             pop_data, start_gen, rng_state = checkpoint.load(resume_dir)
-            population = Population.from_dict(pop_data, rng)
             rng = checkpoint.restore_rng(rng_state)
+            population = Population.from_dict(pop_data, rng)
             start_gen += 1
             logger.info(f"Resumed from generation {start_gen}")
         except FileNotFoundError:
             logger.warning("No checkpoint found, starting fresh")
+
+    # Create proposer AFTER rng is potentially restored from checkpoint
+    proposer = create_proposer(config["proposer"], rng)
+
+    # Create recorder AFTER resume so it can pick up existing best score
+    recorder = Recorder(run_dir, resume=resume_dir is not None)
+    if not resume_dir:
+        recorder.save_config(config)
 
     if population.size() == 0:
         logger.info("Initializing population...")

@@ -42,7 +42,7 @@ class RandomMutationProposer(Proposer):
                 return CyclicStrategy(offsets=offsets, rng=self._rng)
             else:
                 return PerturbedStrategy(base=parent, flip_prob=float(self._rng.uniform(0.01, 0.2)), rng=self._rng)
-        return parent.mutate(self._rng)
+        return parent.mutate(self._rng, n=problem.get("n"))
 
 
 class LLMProvider(ABC):
