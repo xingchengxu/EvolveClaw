@@ -26,3 +26,7 @@ dev = [
 
 [project.scripts]
 evolveclaw-ramsey = "evolveclaw_ramsey.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["runs", ".pytest_cache", "docs", "configs", "research"]

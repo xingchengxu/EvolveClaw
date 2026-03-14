@@ -55,10 +55,11 @@ class RandomStrategy(Strategy):
 class PaleyStrategy(Strategy):
     name = "paley"
     def __init__(self, rng: np.random.Generator):
-        self._seed = int(rng.integers(0, 2**63))
+        pass  # No internal state — construct is fully determined by n
     def construct(self, n: int) -> np.ndarray:
         if not (_is_prime(n) and n % 4 == 1):
-            local_rng = np.random.default_rng(self._seed)
+            # Deterministic fallback seeded from n — no internal RNG state
+            local_rng = np.random.default_rng(n)
             m = (local_rng.random((n, n)) < 0.5).astype(np.int8)
             m = np.triu(m, 1)
             m = m + m.T
@@ -75,9 +76,9 @@ class PaleyStrategy(Strategy):
     def mutate(self, rng: np.random.Generator, n: int | None = None) -> Strategy:
         return PerturbedStrategy(base=PaleyStrategy(rng=rng), flip_prob=0.05, rng=rng)
     def to_dict(self) -> dict:
-        return {"name": "paley", "seed": self._seed}
+        return {"name": "paley"}
     def params_key(self) -> tuple:
-        return ("paley", self._seed)
+        return ("paley",)
 
 class CyclicStrategy(Strategy):
     name = "cyclic"
