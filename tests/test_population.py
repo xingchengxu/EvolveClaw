@@ -69,6 +69,17 @@ def test_tournament_select_returns_best_of_k():
     assert score == 4.0
 
 
+def test_type_counts():
+    """type_counts returns correct strategy type breakdown."""
+    rng = np.random.default_rng(42)
+    pop = Population(max_size=10)
+    pop.add(RandomStrategy(edge_prob=0.3, rng=rng), 5.0)
+    pop.add(RandomStrategy(edge_prob=0.5, rng=rng), 7.0)
+    pop.add(CyclicStrategy(offsets=[1, 3], rng=rng), 6.0)
+    counts = pop.type_counts()
+    assert counts == {"random": 2, "cyclic": 1}
+
+
 def test_serialization_roundtrip():
     """Population survives to_dict/from_dict roundtrip."""
     rng = np.random.default_rng(42)

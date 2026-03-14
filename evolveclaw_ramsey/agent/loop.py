@@ -1,6 +1,7 @@
 """Evolution loop: the core agent that evolves strategies."""
 from __future__ import annotations
 import datetime
+import json
 from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
@@ -69,8 +70,8 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
             population = Population.from_dict(pop_data, rng)
             start_gen += 1
             logger.info(f"Resumed from generation {start_gen}")
-        except FileNotFoundError:
-            logger.warning("No checkpoint found, starting fresh")
+        except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+            logger.warning(f"Could not load checkpoint, starting fresh: {e}")
 
     # Create proposer AFTER rng is potentially restored from checkpoint
     proposer = create_proposer(config["proposer"], rng)
@@ -87,6 +88,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
 
     if population.size() == 0:
         logger.error("Population is empty after initialization — all candidates failed. Aborting.")
+        checkpoint.save(population.to_dict(), 0, rng, run_dir)
         recorder.write_summary(None, 0.0, 0)
         return RunResult(best_strategy=None, best_score=0.0, run_dir=run_dir, generations_completed=0)
 

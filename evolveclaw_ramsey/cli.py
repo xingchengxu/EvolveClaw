@@ -19,8 +19,10 @@ def cmd_run(args):
     result = run_evolution(config, resume_dir=resume_dir, config_stem=config_stem)
     print(f"\nRun complete: {result.run_dir}")
     print(f"Best score: {result.best_score:.2f}")
-    print(f"Best strategy: {result.best_strategy.name}")
+    print(f"Best strategy: {result.best_strategy.name if result.best_strategy else 'none'}")
     print(f"Generations: {result.generations_completed}")
+    if result.best_strategy is None:
+        print("Warning: no candidates were successfully evaluated.")
 
 def cmd_eval(args):
     with open(args.strategy) as f:
@@ -60,6 +62,7 @@ def cmd_replay(args):
     print(f"Replaying run: {run_dir}")
     print("=" * 50)
     best_score = float("-inf")
+    has_success = False
     gen_count = 0
     error_count = 0
     with open(log_path) as f:
@@ -73,6 +76,7 @@ def cmd_replay(args):
             name = record["strategy_name"]
             violations = record["violation_count"]
             added = record.get("added_to_population", False)
+            has_success = True
             marker = " *NEW BEST*" if score > best_score else ""
             if score > best_score:
                 best_score = score
@@ -81,7 +85,10 @@ def cmd_replay(args):
                 print(f"Gen {gen:4d}: score={score:8.2f} violations={violations:3d} strategy={name:10s}{marker}")
     print("=" * 50)
     print(f"Generations: {gen_count}, Errors: {error_count}")
-    print(f"Best score: {best_score:.2f}")
+    if has_success:
+        print(f"Best score: {best_score:.2f}")
+    else:
+        print("No successful evaluations recorded.")
     summary_path = run_dir / "summary.txt"
     if summary_path.exists():
         print(f"\n{summary_path.read_text()}")
