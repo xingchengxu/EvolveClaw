@@ -88,7 +88,20 @@ This project will not discover new Ramsey number bounds. It is a teaching tool t
 ### Install
 
 ```bash
+# Install core + dev dependencies (pytest, etc.)
 pip install -e ".[dev]"
+```
+
+Or using requirements.txt:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run Tests
+
+```bash
+python -m pytest -q
 ```
 
 ### Run the Demo

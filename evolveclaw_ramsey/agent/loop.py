@@ -95,6 +95,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
 
     gen = start_gen
     last_error = None
+    ran_any = False
     run_stats = RunStats()
     for gen in range(start_gen, max_gen):
         parent, parent_score = population.tournament_select(tournament_k, rng)
@@ -106,9 +107,10 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
             logger.debug(f"Gen {gen}: execution error: {exec_result.error}")
             continue
         last_error = None
+        ran_any = True
         score_result = scorer.score(exec_result.graph)
         added = population.add(candidate, score_result.score)
-        gen_stats = run_stats.record(gen, population.scores(), population.strategy_names())
+        gen_stats = run_stats.record(gen, population.scores(), population.strategy_names(), unique_count=population.unique_count())
         recorder.log_generation(gen, candidate, score_result, added, extra=run_stats.to_dict())
         current_best_strat, current_best_score = population.best()
         if score_result.score > best_score:
@@ -124,7 +126,9 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
             break
 
     best_strat, best_score = population.best()
-    checkpoint.save(population.to_dict(), gen, rng, run_dir)
-    recorder.write_summary(best_strat, best_score, gen + 1)
+    if ran_any:
+        checkpoint.save(population.to_dict(), gen, rng, run_dir)
+    generations_completed = (gen + 1) if ran_any else start_gen
+    recorder.write_summary(best_strat, best_score, generations_completed)
     logger.info(f"Run complete. Best score: {best_score:.2f}, strategy: {best_strat.name}")
-    return RunResult(best_strategy=best_strat, best_score=best_score, run_dir=run_dir, generations_completed=gen + 1)
+    return RunResult(best_strategy=best_strat, best_score=best_score, run_dir=run_dir, generations_completed=generations_completed)

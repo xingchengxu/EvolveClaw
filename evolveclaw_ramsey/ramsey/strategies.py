@@ -75,9 +75,9 @@ class PaleyStrategy(Strategy):
     def mutate(self, rng: np.random.Generator, n: int | None = None) -> Strategy:
         return PerturbedStrategy(base=PaleyStrategy(rng=rng), flip_prob=0.05, rng=rng)
     def to_dict(self) -> dict:
-        return {"name": "paley"}
+        return {"name": "paley", "seed": self._seed}
     def params_key(self) -> tuple:
-        return ("paley",)
+        return ("paley", self._seed)
 
 class CyclicStrategy(Strategy):
     name = "cyclic"
@@ -146,6 +146,8 @@ def strategy_from_dict(d: dict, rng: np.random.Generator) -> Strategy:
         return s
     elif name == "paley":
         s = PaleyStrategy(rng=rng)
+        if "seed" in d:
+            s._seed = d["seed"]
         return s
     elif name == "cyclic":
         return CyclicStrategy(offsets=d["offsets"], rng=rng)

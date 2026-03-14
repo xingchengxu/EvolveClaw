@@ -51,6 +51,10 @@ class Population:
         """Return all strategy names in the population."""
         return [s.name for s, _ in self._members]
 
+    def unique_count(self) -> int:
+        """Return the number of distinct individuals (by params_key)."""
+        return len(self._seen_keys)
+
     def to_dict(self) -> dict:
         return {
             "max_size": self.max_size,

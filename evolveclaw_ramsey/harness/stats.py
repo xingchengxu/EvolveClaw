@@ -21,11 +21,11 @@ class RunStats:
         self.history: list[GenerationStats] = []
 
     def record(self, generation: int, scores: list[float],
-               strategy_names: list[str]) -> GenerationStats:
+               strategy_names: list[str], unique_count: int | None = None) -> GenerationStats:
         """Record stats for one generation."""
         best = max(scores) if scores else 0.0
         mean = sum(scores) / len(scores) if scores else 0.0
-        unique = len(set(strategy_names))
+        unique = unique_count if unique_count is not None else len(set(strategy_names))
         pop_size = len(scores)
         diversity = unique / pop_size if pop_size > 0 else 0.0
         stats = GenerationStats(
