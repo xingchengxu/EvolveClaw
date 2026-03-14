@@ -96,7 +96,7 @@ class LLMProposer(Proposer):
             return self._parse_response(response_text)
         except Exception as e:
             logger.warning(f"LLM proposer failed, falling back to random: {e}")
-            return self._fallback.propose(parents, scores, problem)
+            return self._fallback.propose(parents, scores, problem, last_error=last_error)
 
     def _build_prompt(self, parents, scores, problem, last_error=None):
         parent_info = ""

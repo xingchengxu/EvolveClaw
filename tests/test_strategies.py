@@ -72,3 +72,20 @@ def test_perturbed_strategy_serialization_roundtrip():
     s2 = strategy_from_dict(d, rng)
     assert isinstance(s2, PerturbedStrategy)
     assert s2.flip_prob == 0.1
+
+def test_cyclic_mutate_with_n_bounds_offsets():
+    """CyclicStrategy.mutate(n=10) should produce offsets < 10."""
+    rng = np.random.default_rng(42)
+    s = CyclicStrategy(offsets=[1, 3], rng=rng)
+    for seed in range(50):
+        r = np.random.default_rng(seed)
+        s2 = s.mutate(r, n=10)
+        assert all(o < 10 for o in s2.offsets)
+
+def test_cyclic_mutate_without_n_uses_default():
+    """CyclicStrategy.mutate(n=None) should use default upper bound of 20."""
+    rng = np.random.default_rng(42)
+    s = CyclicStrategy(offsets=[1], rng=rng)
+    s2 = s.mutate(rng, n=None)
+    assert isinstance(s2, CyclicStrategy)
+    assert all(o < 20 for o in s2.offsets)

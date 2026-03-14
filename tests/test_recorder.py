@@ -94,3 +94,21 @@ def test_save_config():
     recorder.save_config(config)
     config_path = Path(run_dir) / "config.yaml"
     assert config_path.exists()
+
+
+def test_resume_preserves_previous_best():
+    """Recorder with resume=True loads previous best and won't overwrite with lower score."""
+    run_dir = tempfile.mkdtemp()
+    rng = np.random.default_rng(42)
+    strategy = RandomStrategy(edge_prob=0.5, rng=rng)
+    # First recorder: log a high score
+    rec1 = Recorder(run_dir)
+    rec1.log_generation(0, strategy, _make_score_result(score=12.0), added=True)
+    # Second recorder with resume: should load best=12.0
+    rec2 = Recorder(run_dir, resume=True)
+    rec2.log_generation(5, strategy, _make_score_result(score=8.0), added=True)
+    best_path = Path(run_dir) / "best.json"
+    with open(best_path) as f:
+        best = json.load(f)
+    # best.json should still hold score=12.0 since 8.0 < 12.0
+    assert best["score"] == 12.0

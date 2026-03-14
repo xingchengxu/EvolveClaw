@@ -84,7 +84,6 @@ class CyclicStrategy(Strategy):
     name = "cyclic"
     def __init__(self, offsets: list[int], rng: np.random.Generator):
         self.offsets = sorted(set(offsets))
-        self._rng = rng
     def construct(self, n: int) -> np.ndarray:
         offset_set = set(self.offsets)
         m = np.zeros((n, n), dtype=np.int8)
@@ -146,10 +145,7 @@ def strategy_from_dict(d: dict, rng: np.random.Generator) -> Strategy:
             s._seed = d["seed"]
         return s
     elif name == "paley":
-        s = PaleyStrategy(rng=rng)
-        if "seed" in d:
-            s._seed = d["seed"]
-        return s
+        return PaleyStrategy(rng=rng)
     elif name == "cyclic":
         return CyclicStrategy(offsets=d["offsets"], rng=rng)
     elif name == "perturbed":
