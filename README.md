@@ -31,9 +31,9 @@ EvolveClaw-Ramsey distills this into its simplest useful form:
 
 Several open-source AI agent projects informed the engineering approach:
 
-- **OpenClaw** -- modular skill/integration architecture influenced the clean separation between `ramsey/`, `agent/`, and `harness/` packages.
-- **OpenCode** -- client/server and multi-role patterns informed the executor/evaluator split in the harness layer.
-- **nanobot** -- the ultra-minimal educational philosophy (entire agent in ~4000 lines) set the standard for keeping this project small and readable.
+- **OpenClaw** -- personal AI assistant with gateway architecture and multi-platform skill system; its modular package design influenced the clean separation between `ramsey/`, `agent/`, and `harness/` packages.
+- **OpenCode** -- open-source terminal coding agent with provider-agnostic design; its executor patterns informed the executor/evaluator split in the harness layer.
+- **nanobot** -- ultra-lightweight OpenClaw delivering core agent functionality in ~4000 lines of code; validated the philosophy of keeping this project small and readable.
 - **A3S-Code** -- listed as a reference per project requirements.
 
 ### Harness Engineering
@@ -52,10 +52,10 @@ The harness layer (`evolveclaw_ramsey/harness/`) wraps the core search with oper
 | [AlphaEvolve](https://arxiv.org/abs/2506.13131) | Core idea: evolutionary loop with LLM-as-mutator for combinatorial search |
 | [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) | Reference for faithful AlphaEvolve reimplementation; validated our simplifications |
 | [google-research/ramsey](https://github.com/google-research/google-research/tree/master/ramsey_number_bounds) | Ramsey-specific evaluation and benchmark data |
-| [OpenClaw](https://github.com/All-Hands-AI/OpenHands) | Modular integration/skill architecture |
-| [OpenCode](https://github.com/anthropics/claude-code) | Client/server pattern, multi-agent role separation |
-| [nanobot](https://github.com/pydantic/pydantic-ai) | Ultra-minimal educational agent philosophy |
-| A3S-Code | Listed per project requirements |
+| [OpenClaw](https://github.com/openclaw/openclaw) | Personal AI assistant with gateway architecture and multi-platform skill system; inspired our modular package separation |
+| [OpenCode](https://github.com/anomalyco/opencode) | Open-source terminal coding agent with provider-agnostic design; informed our executor/evaluator split and CLI patterns |
+| [nanobot](https://github.com/HKUDS/nanobot) | Ultra-lightweight OpenClaw (~4000 lines of core code); validated the "minimal yet functional" educational philosophy |
+| [A3S-Code](https://github.com/A3S-Lab/Code) | Listed per project requirements |
 
 ## Project Boundaries
 
