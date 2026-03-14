@@ -1,7 +1,6 @@
 # EvolveClaw-Ramsey
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
-![Tests](https://img.shields.io/badge/tests-93%20passed-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-educational-lightgrey.svg)
 
 A minimal, educational implementation of AlphaEvolve-style evolutionary search applied to Ramsey number lower bounds.
@@ -13,6 +12,14 @@ A minimal, educational implementation of AlphaEvolve-style evolutionary search a
 The name combines **Evolve** (the evolutionary search core from AlphaEvolve) with **Claw** (a nod to the OpenClaw agent ecosystem), reflecting the project's dual heritage: AlphaEvolve's evolutionary methodology and modern AI-agent design patterns.
 
 This project is deliberately small and transparent. It is designed for learning, not for breaking records.
+
+## Who This Is For
+
+- Readers who want a small, inspectable AlphaEvolve-style system they can actually understand end-to-end.
+- Experimenters who want to compare random mutation against an optional real LLM proposer.
+- Developers who care more about clear structure and reproducible runs than benchmark-chasing.
+
+This repository is not a production search stack. It is a compact educational implementation with enough instrumentation to inspect whether a run really used the LLM path.
 
 ## Architecture
 
@@ -181,6 +188,9 @@ This project will not discover new Ramsey number bounds. It is a teaching tool t
 ```bash
 # Install core + dev dependencies (pytest, etc.)
 pip install -e ".[dev]"
+
+# Install core + dev + real LLM provider SDKs
+pip install -e ".[dev,llm]"
 ```
 
 Or using requirements.txt:
@@ -189,7 +199,7 @@ Or using requirements.txt:
 pip install -r requirements.txt
 ```
 
-To use the LLM proposer (optional), also install the LLM dependencies and set your API key:
+`requirements.txt` installs the core runtime and test dependencies, but not the optional LLM SDKs. For real Anthropic/OpenAI runs, use the `llm` extra:
 
 ```bash
 pip install -e ".[llm]"
@@ -225,20 +235,47 @@ python -m evolveclaw_ramsey.cli run --config configs/demo.yaml
 python -m evolveclaw_ramsey.cli run --config configs/llm_demo.yaml
 ```
 
-Or use the shell script:
+To switch the LLM demo from Anthropic to OpenAI, edit `configs/llm_demo.yaml`:
+
+```yaml
+proposer:
+  type: llm
+  llm_provider: openai
+  llm_model: gpt-4.1-mini
+  llm_api_key_env: OPENAI_API_KEY
+```
+
+Or use the shell script on bash-compatible shells:
 
 ```bash
 bash scripts/run_demo.sh
 ```
 
+On Windows PowerShell, prefer the explicit `python -m evolveclaw_ramsey.cli run ...` commands above.
+
 ### View Results
 
 Results are written to the `runs/` directory. Each run produces:
-- `log.jsonl` -- generation-by-generation progress log. Each record includes a `proposer_source` field (`"random"`, `"llm"`, or `"llm_fallback"`) for tracing whether a candidate came from the real LLM.
-- `checkpoints/` -- population state snapshots for resuming interrupted runs.
-- `best.json` -- the best coloring found with its score, violation count, and `proposer_source`.
-- `summary.txt` -- human-readable run summary. LLM runs include a stats section showing total calls, parsed count, and failure count.
-- `config.yaml` -- the configuration used for the run.
+
+| Artifact | Purpose |
+|----------|---------|
+| `log.jsonl` | Generation-by-generation progress log. Successful and failed records include `proposer_source` (`"random"`, `"llm"`, or `"llm_fallback"`). |
+| `checkpoints/` | Population and RNG snapshots for resume/recovery. |
+| `best.json` | Best candidate found so far, including its score, violation count, and `proposer_source`. |
+| `summary.txt` | Human-readable run summary. LLM runs include total calls, parsed count, and failure count. |
+| `config.yaml` | Snapshot of the config used for the run. |
+
+If you want to verify that a run genuinely exercised the LLM path, inspect these fields:
+
+- `log.jsonl`: per-generation `proposer_source`
+- `best.json`: provenance of the current best candidate
+- `summary.txt`: aggregate LLM call counts
+
+Example `log.jsonl` record:
+
+```json
+{"generation": 12, "score": 8.0, "strategy_name": "cyclic", "proposer_source": "llm"}
+```
 
 ### Replay & Visualize
 
@@ -284,7 +321,7 @@ scripts/
 research/
   notes.md                   # Research notes on AlphaEvolve and Ramsey theory
   sources.md                 # Reference links and bibliography
-tests/                      # 93 tests across 16 test files
+  tests/                      # pytest suite covering core behavior and edge cases
   test_graph_repr.py          test_population.py
   test_scoring.py             test_proposer.py
   test_strategies.py          test_recorder.py
