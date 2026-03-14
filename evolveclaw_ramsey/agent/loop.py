@@ -62,6 +62,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
 
     start_gen = 0
     population = Population(config["evolution"]["population_size"])
+    resumed_ok = False
 
     if resume_dir:
         try:
@@ -76,6 +77,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
                 start_gen = saved_gen + 1
             else:
                 start_gen = 0
+            resumed_ok = True
             logger.info(f"Resumed from generation {start_gen}")
         except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
             logger.warning(f"Could not load checkpoint, starting fresh: {e}")
@@ -83,9 +85,10 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
     # Create proposer AFTER rng is potentially restored from checkpoint
     proposer = create_proposer(config["proposer"], rng)
 
-    # Create recorder AFTER resume so it can pick up existing best score
-    recorder = Recorder(run_dir, resume=resume_dir is not None)
-    if not resume_dir:
+    # Only trust previous artifacts (best.json) when checkpoint loaded OK.
+    # A corrupted checkpoint means we're truly starting fresh.
+    recorder = Recorder(run_dir, resume=resumed_ok)
+    if not resumed_ok:
         recorder.save_config(config)
 
     if population.size() == 0:
@@ -142,7 +145,8 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
             break
 
     best_strat, best_score = population.best()
-    checkpoint.save(population.to_dict(), gen, rng, run_dir)
+    if last_gen_run >= 0:
+        checkpoint.save(population.to_dict(), last_gen_run, rng, run_dir)
     generations_completed = (last_gen_run + 1) if last_gen_run >= 0 else start_gen
     recorder.write_summary(best_strat, best_score, generations_completed)
     logger.info(f"Run complete. Best score: {best_score:.2f}, strategy: {best_strat.name}")
