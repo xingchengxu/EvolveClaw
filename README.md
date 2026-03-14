@@ -20,7 +20,7 @@ This project is deliberately small and transparent. It is designed for learning,
 graph TB
     subgraph CLI["CLI Layer"]
         run["run"]
-        eval["eval"]
+        evalCmd["eval"]
         replay["replay"]
     end
 
@@ -33,7 +33,7 @@ graph TB
     end
 
     subgraph Harness["Harness Layer"]
-        exec["Executor<br/><i>multiprocessing + timeout</i>"]
+        executor["Executor<br/><i>multiprocessing + timeout</i>"]
         evaluator["Evaluator"]
         rec["Recorder<br/><i>JSONL log + best.json</i>"]
         ckpt["Checkpoint<br/><i>JSON serialization</i>"]
@@ -44,7 +44,7 @@ graph TB
     subgraph Domain["Ramsey Domain"]
         strat["Strategy Objects"]
         scorer["Ramsey Scorer<br/><i>clique counting</i>"]
-        graph["Graph Repr<br/><i>adjacency matrix</i>"]
+        graphRepr["Graph Repr<br/><i>adjacency matrix</i>"]
         random_s["Random"]
         paley_s["Paley"]
         cyclic_s["Cyclic"]
@@ -52,15 +52,15 @@ graph TB
     end
 
     run --> loop
-    eval --> scorer
+    evalCmd --> scorer
     replay --> viz
 
     loop -->|"select parent"| pop
     loop -->|"propose candidate"| prop
     prop --> rand_prop
     prop --> llm_prop
-    loop -->|"execute + validate"| exec
-    exec -->|"graph"| evaluator
+    loop -->|"execute + validate"| executor
+    executor -->|"graph"| evaluator
     evaluator -->|"score"| scorer
     loop -->|"log generation"| rec
     loop -->|"save state"| ckpt
@@ -70,7 +70,7 @@ graph TB
     strat --> paley_s
     strat --> cyclic_s
     strat --> perturbed_s
-    scorer --> graph
+    scorer --> graphRepr
 
     style CLI fill:#4a9eff,color:#fff
     style Agent fill:#ff6b6b,color:#fff

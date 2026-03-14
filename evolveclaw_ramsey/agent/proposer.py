@@ -113,6 +113,10 @@ class LLMProposer(Proposer):
             "llm_failures": self._llm_failure_count,
         }
 
+    def restore_llm_stats(self, stats: dict) -> None:
+        self._llm_success_count = stats.get("llm_successes", 0)
+        self._llm_failure_count = stats.get("llm_failures", 0)
+
     def propose(self, parents: list[Strategy], scores: list[float], problem: dict,
                 last_error: str | None = None) -> Strategy:
         prompt = self._build_prompt(parents, scores, problem, last_error)

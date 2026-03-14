@@ -4,17 +4,20 @@ import json
 from pathlib import Path
 import numpy as np
 
-def save(population_data: dict, generation: int, rng: np.random.Generator, run_dir: str) -> None:
+def save(population_data: dict, generation: int, rng: np.random.Generator, run_dir: str,
+         extra: dict | None = None) -> None:
     ckpt_dir = Path(run_dir) / "checkpoints"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     rng_state = rng.bit_generator.state
     rng_state_serializable = _make_serializable(rng_state)
     data = {"generation": generation, "population": population_data, "rng_state": rng_state_serializable}
+    if extra:
+        data["extra"] = extra
     path = ckpt_dir / f"gen_{generation}.json"
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
 
-def load(run_dir: str, generation: int | None = None) -> tuple[dict, int, dict]:
+def load(run_dir: str, generation: int | None = None) -> tuple[dict, int, dict, dict | None]:
     ckpt_dir = Path(run_dir) / "checkpoints"
     if not ckpt_dir.exists():
         raise FileNotFoundError(f"No checkpoints directory in {run_dir}")
@@ -28,7 +31,7 @@ def load(run_dir: str, generation: int | None = None) -> tuple[dict, int, dict]:
         path = files[-1]
     with open(path) as f:
         data = json.load(f)
-    return data["population"], data["generation"], data["rng_state"]
+    return data["population"], data["generation"], data["rng_state"], data.get("extra")
 
 def restore_rng(rng_state_dict: dict) -> np.random.Generator:
     rng = np.random.default_rng()

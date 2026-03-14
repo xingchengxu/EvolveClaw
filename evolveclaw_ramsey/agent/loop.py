@@ -63,12 +63,15 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
     start_gen = 0
     population = Population(config["evolution"]["population_size"])
     resumed_ok = False
+    saved_llm_stats = None
 
     if resume_dir:
         try:
-            pop_data, saved_gen, rng_state = checkpoint.load(resume_dir)
+            pop_data, saved_gen, rng_state, ckpt_extra = checkpoint.load(resume_dir)
             rng = checkpoint.restore_rng(rng_state)
             population = Population.from_dict(pop_data, rng)
+            if ckpt_extra and "llm_stats" in ckpt_extra:
+                saved_llm_stats = ckpt_extra["llm_stats"]
             # Only advance past the saved generation if it actually ran
             # (i.e. population is non-empty, meaning the loop executed).
             # A checkpoint from the empty-population early-exit path
@@ -84,6 +87,8 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
 
     # Create proposer AFTER rng is potentially restored from checkpoint
     proposer = create_proposer(config["proposer"], rng)
+    if saved_llm_stats and isinstance(proposer, LLMProposer):
+        proposer.restore_llm_stats(saved_llm_stats)
 
     # Only trust previous artifacts (best.json) when checkpoint loaded OK.
     # A corrupted checkpoint means we're truly starting fresh.
@@ -96,9 +101,14 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
         initialize_population(population, config, evaluator, rng)
         logger.info(f"Population initialized with {population.size()} members")
 
+    def _ckpt_extra():
+        if isinstance(proposer, LLMProposer):
+            return {"llm_stats": proposer.llm_stats}
+        return None
+
     if population.size() == 0:
         logger.error("Population is empty after initialization — all candidates failed. Aborting.")
-        checkpoint.save(population.to_dict(), 0, rng, run_dir)
+        checkpoint.save(population.to_dict(), 0, rng, run_dir, extra=_ckpt_extra())
         recorder.write_summary(None, 0.0, 0)
         return RunResult(best_strategy=None, best_score=0.0, run_dir=run_dir, generations_completed=0)
 
@@ -142,14 +152,14 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
         elif gen % 10 == 0:
             logger.info(f"Gen {gen}: score={score_result.score:.2f} best={best_score:.2f}")
         if gen > 0 and gen % ckpt_interval == 0:
-            checkpoint.save(population.to_dict(), gen, rng, run_dir)
+            checkpoint.save(population.to_dict(), gen, rng, run_dir, extra=_ckpt_extra())
         if score_result.violation_count == 0:
             logger.info(f"Gen {gen}: PERFECT SCORE! No violations found.")
             break
 
     best_strat, best_score = population.best()
     if last_gen_run >= 0:
-        checkpoint.save(population.to_dict(), last_gen_run, rng, run_dir)
+        checkpoint.save(population.to_dict(), last_gen_run, rng, run_dir, extra=_ckpt_extra())
     generations_completed = (last_gen_run + 1) if last_gen_run >= 0 else start_gen
     llm_stats = proposer.llm_stats if isinstance(proposer, LLMProposer) else None
     recorder.write_summary(best_strat, best_score, generations_completed, llm_stats=llm_stats)
