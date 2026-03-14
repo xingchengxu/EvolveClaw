@@ -89,7 +89,7 @@ class OpenAIProvider(LLMProvider):
         self._client = openai.OpenAI(api_key=api_key)
 
     def call(self, prompt: str, max_tokens: int = 500) -> str:
-        response = self._client.chat.completions.create(model=self.model, max_tokens=max_tokens,
+        response = self._client.chat.completions.create(model=self.model, max_completion_tokens=max_tokens,
                                                         messages=[{"role": "user", "content": prompt}])
         return response.choices[0].message.content
 

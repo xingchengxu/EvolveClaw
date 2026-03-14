@@ -218,7 +218,11 @@ python -m pytest -q
 ### Run the Demo
 
 ```bash
+# Random mutation proposer (no LLM needed)
 python -m evolveclaw_ramsey.cli run --config configs/demo.yaml
+
+# LLM proposer (requires .[llm] install and API key)
+python -m evolveclaw_ramsey.cli run --config configs/llm_demo.yaml
 ```
 
 Or use the shell script:
@@ -230,10 +234,10 @@ bash scripts/run_demo.sh
 ### View Results
 
 Results are written to the `runs/` directory. Each run produces:
-- `log.jsonl` -- generation-by-generation progress log.
+- `log.jsonl` -- generation-by-generation progress log. Each record includes a `proposer_source` field (`"random"`, `"llm"`, or `"llm_fallback"`) for tracing whether a candidate came from the real LLM.
 - `checkpoints/` -- population state snapshots for resuming interrupted runs.
-- `best.json` -- the best coloring found with its score and violation count.
-- `summary.txt` -- human-readable run summary.
+- `best.json` -- the best coloring found with its score, violation count, and `proposer_source`.
+- `summary.txt` -- human-readable run summary. LLM runs include a stats section showing total calls, parsed count, and failure count.
 - `config.yaml` -- the configuration used for the run.
 
 ### Replay & Visualize
