@@ -109,12 +109,12 @@ class LLMProposer(Proposer):
         total = self._llm_success_count + self._llm_failure_count
         return {
             "llm_calls": total,
-            "llm_successes": self._llm_success_count,
+            "llm_parsed": self._llm_success_count,
             "llm_failures": self._llm_failure_count,
         }
 
     def restore_llm_stats(self, stats: dict) -> None:
-        self._llm_success_count = stats.get("llm_successes", 0)
+        self._llm_success_count = stats.get("llm_parsed", stats.get("llm_successes", 0))
         self._llm_failure_count = stats.get("llm_failures", 0)
 
     def propose(self, parents: list[Strategy], scores: list[float], problem: dict,

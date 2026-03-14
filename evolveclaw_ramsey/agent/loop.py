@@ -133,7 +133,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
         exec_result = executor.execute(candidate, n)
         if exec_result.error:
             last_error = exec_result.error
-            recorder.log_error(gen, exec_result.error)
+            recorder.log_error(gen, exec_result.error, proposer_source=proposer_source)
             logger.debug(f"Gen {gen}: execution error: {exec_result.error}")
             continue
         last_error = None

@@ -12,3 +12,6 @@ venv/
 .claude/
 evolveclaw-ramsey-prompt.md
 docs/
+.tmp_pytest/
+pytest-cache-files-*/
+tmp*/

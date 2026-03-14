@@ -47,8 +47,10 @@ class Recorder:
             with open(self._best_path, "w") as f:
                 json.dump(best_data, f, indent=2)
 
-    def log_error(self, gen: int, error: str) -> None:
+    def log_error(self, gen: int, error: str, proposer_source: str | None = None) -> None:
         record = {"generation": gen, "error": error}
+        if proposer_source:
+            record["proposer_source"] = proposer_source
         with open(self._log_path, "a") as f:
             f.write(json.dumps(record) + "\n")
 
@@ -62,7 +64,7 @@ class Recorder:
         if llm_stats:
             summary += (f"\nLLM Proposer Stats\n{'-' * 20}\n"
                        f"Total LLM calls: {llm_stats['llm_calls']}\n"
-                       f"Successes: {llm_stats['llm_successes']}\n"
-                       f"Failures: {llm_stats['llm_failures']}\n")
+                       f"Parsed (strategy object created): {llm_stats['llm_parsed']}\n"
+                       f"Failures (API/parse error): {llm_stats['llm_failures']}\n")
         with open(self.run_dir / "summary.txt", "w") as f:
             f.write(summary)
