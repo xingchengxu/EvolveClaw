@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import numpy as np
 from evolveclaw_ramsey.agent.population import Population
-from evolveclaw_ramsey.agent.proposer import create_proposer
+from evolveclaw_ramsey.agent.proposer import create_proposer, LLMProposer
 from evolveclaw_ramsey.harness import checkpoint
 from evolveclaw_ramsey.harness.evaluator import Evaluator
 from evolveclaw_ramsey.harness.executor import Executor
@@ -119,6 +119,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
         last_gen_run = gen
         parent, parent_score = population.tournament_select(tournament_k, rng)
         candidate = proposer.propose([parent], [parent_score], config["problem"], last_error=last_error)
+        proposer_source = proposer.last_source
         exec_result = executor.execute(candidate, n)
         if exec_result.error:
             last_error = exec_result.error
@@ -130,7 +131,9 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
         score_result = scorer.score(exec_result.graph)
         added = population.add(candidate, score_result.score)
         gen_stats = run_stats.record(gen, population.scores(), population.type_counts())
-        recorder.log_generation(gen, candidate, score_result, added, extra=run_stats.to_dict())
+        extra = run_stats.to_dict()
+        extra["proposer_source"] = proposer_source
+        recorder.log_generation(gen, candidate, score_result, added, extra=extra)
         current_best_strat, current_best_score = population.best()
         if score_result.score > best_score:
             best_score = score_result.score
@@ -148,6 +151,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
     if last_gen_run >= 0:
         checkpoint.save(population.to_dict(), last_gen_run, rng, run_dir)
     generations_completed = (last_gen_run + 1) if last_gen_run >= 0 else start_gen
-    recorder.write_summary(best_strat, best_score, generations_completed)
+    llm_stats = proposer.llm_stats if isinstance(proposer, LLMProposer) else None
+    recorder.write_summary(best_strat, best_score, generations_completed, llm_stats=llm_stats)
     logger.info(f"Run complete. Best score: {best_score:.2f}, strategy: {best_strat.name}")
     return RunResult(best_strategy=best_strat, best_score=best_score, run_dir=run_dir, generations_completed=generations_completed)

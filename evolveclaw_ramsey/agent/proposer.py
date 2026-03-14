@@ -14,6 +14,8 @@ logger = logging.getLogger(LOGGER_NAME)
 
 
 class Proposer(ABC):
+    last_source: str = "random"
+
     @abstractmethod
     def propose(self, parents: list[Strategy], scores: list[float], problem: dict,
                 last_error: str | None = None) -> Strategy:
@@ -99,6 +101,17 @@ class LLMProposer(Proposer):
         self._fallback = RandomMutationProposer(rng=rng)
         self._consecutive_failures = 0
         self._max_silent_failures = 3
+        self._llm_success_count = 0
+        self._llm_failure_count = 0
+
+    @property
+    def llm_stats(self) -> dict:
+        total = self._llm_success_count + self._llm_failure_count
+        return {
+            "llm_calls": total,
+            "llm_successes": self._llm_success_count,
+            "llm_failures": self._llm_failure_count,
+        }
 
     def propose(self, parents: list[Strategy], scores: list[float], problem: dict,
                 last_error: str | None = None) -> Strategy:
@@ -106,9 +119,13 @@ class LLMProposer(Proposer):
         try:
             response_text = self._provider.call(prompt)
             self._consecutive_failures = 0
+            self._llm_success_count += 1
+            self.last_source = "llm"
             return self._parse_response(response_text)
         except Exception as e:
             self._consecutive_failures += 1
+            self._llm_failure_count += 1
+            self.last_source = "llm_fallback"
             if self._consecutive_failures <= self._max_silent_failures:
                 logger.warning(f"LLM proposer failed ({self._consecutive_failures}/{self._max_silent_failures}), falling back to random: {e}")
             if self._consecutive_failures == self._max_silent_failures:
