@@ -187,7 +187,8 @@ def create_proposer(config: dict, rng: np.random.Generator) -> Proposer:
         return RandomMutationProposer(rng=rng)
     elif proposer_type == "llm":
         provider_name = config.get("llm_provider", "anthropic")
-        model = config.get("llm_model", "claude-sonnet-4-20250514")
+        default_model = {"anthropic": "claude-sonnet-4-20250514", "openai": "gpt-4.1-mini"}
+        model = config.get("llm_model", default_model.get(provider_name, "claude-sonnet-4-20250514"))
         default_key_env = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
         api_key_env = config.get("llm_api_key_env", default_key_env.get(provider_name, "ANTHROPIC_API_KEY"))
         api_key = os.environ.get(api_key_env)
