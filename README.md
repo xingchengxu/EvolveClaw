@@ -1,6 +1,8 @@
 # EvolveClaw-Ramsey
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![Tests](https://img.shields.io/badge/tests-93%20passed-brightgreen.svg)
+![License](https://img.shields.io/badge/license-educational-lightgrey.svg)
 
 A minimal, educational implementation of AlphaEvolve-style evolutionary search applied to Ramsey number lower bounds.
 
@@ -11,6 +13,93 @@ A minimal, educational implementation of AlphaEvolve-style evolutionary search a
 The name combines **Evolve** (the evolutionary search core from AlphaEvolve) with **Claw** (a nod to the OpenClaw agent ecosystem), reflecting the project's dual heritage: AlphaEvolve's evolutionary methodology and modern AI-agent design patterns.
 
 This project is deliberately small and transparent. It is designed for learning, not for breaking records.
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph CLI["CLI Layer"]
+        run["run"]
+        eval["eval"]
+        replay["replay"]
+    end
+
+    subgraph Agent["Agent Layer"]
+        loop["Evolution Loop"]
+        pop["Population<br/><i>ranked list + dedup</i>"]
+        prop["Proposer"]
+        rand_prop["RandomMutation<br/>Proposer"]
+        llm_prop["LLM Proposer<br/><i>Claude / GPT</i>"]
+    end
+
+    subgraph Harness["Harness Layer"]
+        exec["Executor<br/><i>multiprocessing + timeout</i>"]
+        evaluator["Evaluator"]
+        rec["Recorder<br/><i>JSONL log + best.json</i>"]
+        ckpt["Checkpoint<br/><i>JSON serialization</i>"]
+        stats["RunStats<br/><i>convergence tracking</i>"]
+        viz["Visualize<br/><i>ASCII + matplotlib</i>"]
+    end
+
+    subgraph Domain["Ramsey Domain"]
+        strat["Strategy Objects"]
+        scorer["Ramsey Scorer<br/><i>clique counting</i>"]
+        graph["Graph Repr<br/><i>adjacency matrix</i>"]
+        random_s["Random"]
+        paley_s["Paley"]
+        cyclic_s["Cyclic"]
+        perturbed_s["Perturbed"]
+    end
+
+    run --> loop
+    eval --> scorer
+    replay --> viz
+
+    loop -->|"select parent"| pop
+    loop -->|"propose candidate"| prop
+    prop --> rand_prop
+    prop --> llm_prop
+    loop -->|"execute + validate"| exec
+    exec -->|"graph"| evaluator
+    evaluator -->|"score"| scorer
+    loop -->|"log generation"| rec
+    loop -->|"save state"| ckpt
+    loop -->|"track metrics"| stats
+
+    strat --> random_s
+    strat --> paley_s
+    strat --> cyclic_s
+    strat --> perturbed_s
+    scorer --> graph
+
+    style CLI fill:#4a9eff,color:#fff
+    style Agent fill:#ff6b6b,color:#fff
+    style Harness fill:#ffd93d,color:#333
+    style Domain fill:#6bcb77,color:#fff
+```
+
+### Evolution Flow
+
+```mermaid
+flowchart LR
+    A["Initialize<br/>Population"] --> B["Tournament<br/>Select Parent"]
+    B --> C["Propose<br/>Candidate"]
+    C --> D["Execute<br/><i>with timeout</i>"]
+    D --> E{"Error?"}
+    E -->|yes| F["Log Error<br/>Feed back to proposer"]
+    F --> B
+    E -->|no| G["Score<br/>Violations"]
+    G --> H["Add to<br/>Population"]
+    H --> I{"Perfect<br/>Score?"}
+    I -->|yes| J["Done!"]
+    I -->|no| K{"Max Gen<br/>Reached?"}
+    K -->|no| B
+    K -->|yes| J
+
+    style A fill:#6bcb77,color:#fff
+    style J fill:#4a9eff,color:#fff
+    style F fill:#ff6b6b,color:#fff
+```
 
 ## Core Ideas
 
@@ -41,10 +130,12 @@ Several open-source AI agent projects informed the engineering approach:
 
 The harness layer (`evolveclaw_ramsey/harness/`) wraps the core search with operational concerns:
 
-- **Executor** -- runs strategy objects with timeouts and error isolation.
+- **Executor** -- runs strategy objects in isolated subprocesses with timeouts and error isolation.
 - **Evaluator** -- scores candidates and ranks them.
-- **Recorder** -- logs generation-by-generation results for analysis.
-- **Checkpoint** -- saves and restores population state for resumable runs.
+- **Recorder** -- logs generation-by-generation results (JSONL format) and tracks the best coloring found.
+- **Checkpoint** -- saves and restores population state + RNG state for resumable runs.
+- **Stats** -- tracks convergence metrics (best/mean score, strategy type diversity) per generation.
+- **Visualize** -- renders ASCII score curves in the terminal and optional matplotlib plots.
 
 ## References and Inspirations
 
@@ -68,7 +159,7 @@ The harness layer (`evolveclaw_ramsey/harness/`) wraps the core search with oper
 | LLM ensemble (Flash + Pro) | Single optional LLM proposer |
 | Asynchronous pipeline | Synchronous loop |
 | Diff-based code mutations | Strategy object mutations |
-| Distributed evaluation | Single-process execution |
+| Distributed evaluation | Multiprocessing with timeout |
 | Production infrastructure | Educational single-file runs |
 
 ### What Is NOT Included
@@ -139,9 +230,21 @@ bash scripts/run_demo.sh
 ### View Results
 
 Results are written to the `runs/` directory. Each run produces:
-- A log of generation-by-generation progress.
-- Checkpoint files for resuming interrupted searches.
-- The best coloring found and its violation count.
+- `log.jsonl` -- generation-by-generation progress log.
+- `checkpoints/` -- population state snapshots for resuming interrupted runs.
+- `best.json` -- the best coloring found with its score and violation count.
+- `summary.txt` -- human-readable run summary.
+- `config.yaml` -- the configuration used for the run.
+
+### Replay & Visualize
+
+```bash
+# ASCII score curve in the terminal
+python -m evolveclaw_ramsey.cli replay <run_dir>
+
+# With matplotlib plot saved as PNG
+python -m evolveclaw_ramsey.cli replay <run_dir> --plot
+```
 
 ## Repository Structure
 
@@ -149,29 +252,27 @@ Results are written to the `runs/` directory. Each run produces:
 evolveclaw_ramsey/
   __init__.py
   __main__.py
-  cli.py                    # CLI entry point
-  ramsey/
-    __init__.py
-    graph_repr.py            # Adjacency matrix coloring representation
+  cli.py                    # CLI entry point (run / eval / replay)
+  ramsey/                   # Domain layer: Ramsey graph theory
+    graph_repr.py            # Adjacency matrix utilities (validate, complement, edge list)
     scoring.py               # Monochromatic clique violation counter
-    strategies.py            # Coloring strategies (Random, Paley, Cyclic, Perturbed)
-  agent/
-    __init__.py
-    population.py            # Ranked population management
-    proposer.py              # Mutation proposers (random, optional LLM)
-    loop.py                  # Main evolution loop
-  harness/
-    __init__.py
-    executor.py              # Strategy execution with timeout
-    evaluator.py             # Candidate evaluation and ranking
-    recorder.py              # Run logging and metrics
-    checkpoint.py            # Save/restore population state
-  utils/
-    __init__.py
-    config.py                # YAML config loading
-    logging.py               # Logging setup
+    strategies.py            # Graph construction strategies (Random, Paley, Cyclic, Perturbed)
+  agent/                    # Agent layer: evolutionary search logic
+    population.py            # Ranked population with deduplication and tournament selection
+    proposer.py              # Strategy proposers (RandomMutation, LLM with Anthropic/OpenAI)
+    loop.py                  # Main evolution loop with checkpoint/resume
+  harness/                  # Harness layer: operational infrastructure
+    executor.py              # Subprocess execution with timeout and validation
+    evaluator.py             # Strategy evaluation pipeline
+    recorder.py              # JSONL logging, best.json tracking, summary generation
+    checkpoint.py            # Population + RNG state serialization
+    stats.py                 # Per-generation convergence statistics
+    visualize.py             # ASCII score plots and matplotlib visualization
+  utils/                    # Shared utilities
+    config.py                # YAML config loading with deep-merge defaults
+    logging.py               # Logging setup (console + file)
 configs/
-  demo.yaml                  # Quick demo configuration
+  demo.yaml                  # Quick demo: R(4,4) with n=17, 100 generations
   llm_demo.yaml              # LLM proposer configuration
 scripts/
   run_demo.sh                # Quick demo launcher
@@ -179,12 +280,15 @@ scripts/
 research/
   notes.md                   # Research notes on AlphaEvolve and Ramsey theory
   sources.md                 # Reference links and bibliography
-tests/
-  test_graph_repr.py
-  test_scoring.py
-  test_strategies.py
-  test_evaluator.py
-  test_loop.py
+tests/                      # 93 tests across 16 test files
+  test_graph_repr.py          test_population.py
+  test_scoring.py             test_proposer.py
+  test_strategies.py          test_recorder.py
+  test_evaluator.py           test_stats.py
+  test_executor.py            test_checkpoint.py
+  test_loop.py                test_config.py
+  test_cli.py                 test_logging.py
+  test_visualize.py
 ```
 
 ## Technical Details
@@ -192,6 +296,15 @@ tests/
 ### Candidate Representation
 
 Each candidate is a **strategy object** that produces a 2-coloring of the edges of the complete graph K_n. The coloring is stored as an n-by-n symmetric adjacency matrix with values in {0, 1}, where 0 and 1 represent the two colors (conventionally "red" and "blue").
+
+Four built-in strategy types:
+
+| Strategy | Description | Parameters |
+|----------|-------------|------------|
+| **Random** | Bernoulli random edges | `edge_prob` (0-1) |
+| **Paley** | Quadratic residue construction for primes p = 1 mod 4 | None (deterministic from n) |
+| **Cyclic** | Connect vertices at specified cyclic offsets | `offsets` (list of ints) |
+| **Perturbed** | Flip random edges of a base strategy's output | `base` (any strategy), `flip_prob` |
 
 ### Scoring Logic
 
@@ -207,21 +320,26 @@ where `violations = count_cliques(G, s) + count_cliques(complement(G), t)`. High
 
 ### Evolution Loop
 
-1. **Initialize** a population of random strategy objects.
-2. **Evaluate** each candidate by executing its strategy and scoring the resulting coloring.
-3. **Select** parents via tournament selection (pick `k` candidates, take the best).
-4. **Mutate** selected parents to produce offspring (parameter perturbation, strategy type switching, or edge flipping).
-5. **Replace** the worst members of the population with better offspring.
-6. **Repeat** for `max_generations` or until a zero-violation coloring is found.
+1. **Initialize** a population of strategy objects (random, Paley, cyclic varieties).
+2. **Execute** each candidate in an isolated subprocess with timeout.
+3. **Score** the resulting coloring by counting monochromatic clique violations.
+4. **Select** parents via tournament selection (pick `k` candidates, take the best).
+5. **Mutate** selected parents to produce offspring (parameter perturbation, strategy type switching, or edge flipping).
+6. **Replace** the worst members of the population with better offspring (with deduplication).
+7. **Repeat** for `max_generations` or until a zero-violation coloring is found.
+
+Failed candidates feed their error messages back into the proposer via the `last_error` mechanism, guiding the search away from failing strategies.
 
 ### Harness Layers
 
 The harness wraps the core loop with operational infrastructure:
 
-- **Executor** runs each strategy with a configurable timeout, catching errors and infinite loops.
+- **Executor** runs each strategy in a child process with a configurable timeout, catching crashes and infinite loops.
 - **Evaluator** takes executor output and computes fitness scores.
-- **Recorder** writes per-generation statistics (best score, mean score, diversity metrics).
-- **Checkpoint** serializes population state to disk at configurable intervals for crash recovery.
+- **Recorder** writes per-generation statistics in JSONL format and maintains `best.json` with the highest-scoring coloring.
+- **Checkpoint** serializes population state and RNG state to disk at configurable intervals for crash recovery and deterministic resume.
+- **Stats** tracks convergence metrics per generation: best score, mean score, strategy type diversity, improvement count.
+- **Visualize** renders ASCII score evolution curves in the terminal, with optional matplotlib PNG export.
 
 ## Configuration
 
@@ -262,12 +380,10 @@ Key parameters:
 
 ## Future Extensions
 
-- **LLM Proposer** -- Use an LLM (Claude, GPT-4) to propose strategy mutations, moving closer to AlphaEvolve's core mechanism.
-- **Parallel Evaluation** -- Run candidate evaluations in parallel using multiprocessing.
 - **MAP-Elites Population** -- Replace the ranked list with a MAP-Elites grid for better diversity maintenance.
 - **Benchmark Suite** -- Systematic evaluation across R(3,k) and R(4,k) for various n values.
-- **Visualization** -- Graph coloring visualizations and evolution progress plots.
 - **Island Model** -- Multiple sub-populations with periodic migration to reduce premature convergence.
+- **Graph Coloring Visualization** -- Visual rendering of edge colorings for found counter-examples.
 
 ## License
 
