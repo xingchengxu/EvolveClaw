@@ -32,7 +32,8 @@ EvolveClaw-Ramsey distills this into its simplest useful form:
 Several open-source AI agent projects informed the engineering approach:
 
 - **OpenClaw** -- personal AI assistant with gateway architecture and multi-platform skill system; its modular package design influenced the clean separation between `ramsey/`, `agent/`, and `harness/` packages.
-- **OpenCode** -- open-source terminal coding agent with provider-agnostic design; its executor patterns informed the executor/evaluator split in the harness layer.
+- **OpenCode** -- open-source terminal coding agent with provider-agnostic design; its `LLMProvider` abstraction pattern is adopted in our `LLMProvider` ABC, making it trivial to add new LLM backends. Its executor patterns also informed the executor/evaluator split in the harness layer.
+- **OpenEvolve** -- faithful AlphaEvolve reimplementation; its error artifact side-channel pattern (feeding execution failures back into prompts) is adopted in our proposer's `last_error` feedback mechanism.
 - **nanobot** -- ultra-lightweight OpenClaw delivering core agent functionality in ~4000 lines of code; validated the philosophy of keeping this project small and readable.
 - **A3S-Code** -- listed as a reference per project requirements.
 
@@ -50,11 +51,11 @@ The harness layer (`evolveclaw_ramsey/harness/`) wraps the core search with oper
 | Project | What We Borrowed |
 |---------|-----------------|
 | [AlphaEvolve](https://arxiv.org/abs/2506.13131) | Core idea: evolutionary loop with LLM-as-mutator for combinatorial search |
-| [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) | Reference for faithful AlphaEvolve reimplementation; validated our simplifications |
+| [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve) | Population management, checkpoint design, error artifact feedback pattern; validated our simplifications |
 | [google-research/ramsey](https://github.com/google-research/google-research/tree/master/ramsey_number_bounds) | Ramsey-specific evaluation and benchmark data |
-| [OpenClaw](https://github.com/openclaw/openclaw) | Personal AI assistant with gateway architecture and multi-platform skill system; inspired our modular package separation |
-| [OpenCode](https://github.com/anomalyco/opencode) | Open-source terminal coding agent with provider-agnostic design; informed our executor/evaluator split and CLI patterns |
-| [nanobot](https://github.com/HKUDS/nanobot) | Ultra-lightweight OpenClaw (~4000 lines of core code); validated the "minimal yet functional" educational philosophy |
+| [OpenClaw](https://github.com/openclaw/openclaw) | Gateway/dispatcher architecture; inspired modular `ramsey/`, `agent/`, `harness/` package separation |
+| [OpenCode](https://github.com/anomalyco/opencode) | Provider-agnostic LLM abstraction (`LLMProvider` ABC); informed executor/evaluator split and CLI patterns |
+| [nanobot](https://github.com/HKUDS/nanobot) | Ultra-minimal agent philosophy (~4000 lines); validated "minimal yet functional" educational approach |
 | [A3S-Code](https://github.com/A3S-Lab/Code) | Listed per project requirements |
 
 ## Project Boundaries
