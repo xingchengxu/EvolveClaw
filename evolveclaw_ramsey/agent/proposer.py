@@ -87,15 +87,26 @@ class LLMProposer(Proposer):
         self._provider = provider
         self._rng = rng
         self._fallback = RandomMutationProposer(rng=rng)
+        self._consecutive_failures = 0
+        self._max_silent_failures = 3
 
     def propose(self, parents: list[Strategy], scores: list[float], problem: dict,
                 last_error: str | None = None) -> Strategy:
         prompt = self._build_prompt(parents, scores, problem, last_error)
         try:
             response_text = self._provider.call(prompt)
+            self._consecutive_failures = 0
             return self._parse_response(response_text)
         except Exception as e:
-            logger.warning(f"LLM proposer failed, falling back to random: {e}")
+            self._consecutive_failures += 1
+            if self._consecutive_failures <= self._max_silent_failures:
+                logger.warning(f"LLM proposer failed ({self._consecutive_failures}/{self._max_silent_failures}), falling back to random: {e}")
+            if self._consecutive_failures == self._max_silent_failures:
+                logger.error(
+                    f"LLM proposer has failed {self._max_silent_failures} consecutive times. "
+                    "It will continue to fall back to random mutation silently. "
+                    "Check your API key, SDK installation, and provider configuration."
+                )
             return self._fallback.propose(parents, scores, problem, last_error=last_error)
 
     def _build_prompt(self, parents, scores, problem, last_error=None):
@@ -139,7 +150,8 @@ def create_proposer(config: dict, rng: np.random.Generator) -> Proposer:
     elif proposer_type == "llm":
         provider_name = config.get("llm_provider", "anthropic")
         model = config.get("llm_model", "claude-sonnet-4-20250514")
-        api_key_env = config.get("llm_api_key_env", "ANTHROPIC_API_KEY")
+        default_key_env = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
+        api_key_env = config.get("llm_api_key_env", default_key_env.get(provider_name, "ANTHROPIC_API_KEY"))
         api_key = os.environ.get(api_key_env)
         if not api_key:
             raise ValueError(f"LLM proposer requires API key. Set the {api_key_env} environment variable.")
