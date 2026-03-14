@@ -37,6 +37,10 @@ def from_edge_list(edges: list[tuple[int, int]], n: int) -> np.ndarray:
     """Build an n x n adjacency matrix from a list of edges."""
     matrix = np.zeros((n, n), dtype=np.int8)
     for i, j in edges:
+        if i < 0 or j < 0 or i >= n or j >= n:
+            raise ValueError(f"Edge ({i}, {j}) out of bounds for n={n}")
+        if i == j:
+            raise ValueError(f"Self-loop ({i}, {i}) not allowed")
         matrix[i, j] = 1
         matrix[j, i] = 1
     return matrix

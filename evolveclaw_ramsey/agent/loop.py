@@ -65,10 +65,17 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
 
     if resume_dir:
         try:
-            pop_data, start_gen, rng_state = checkpoint.load(resume_dir)
+            pop_data, saved_gen, rng_state = checkpoint.load(resume_dir)
             rng = checkpoint.restore_rng(rng_state)
             population = Population.from_dict(pop_data, rng)
-            start_gen += 1
+            # Only advance past the saved generation if it actually ran
+            # (i.e. population is non-empty, meaning the loop executed).
+            # A checkpoint from the empty-population early-exit path
+            # represents "never entered the loop", so resume from 0.
+            if population.size() > 0:
+                start_gen = saved_gen + 1
+            else:
+                start_gen = 0
             logger.info(f"Resumed from generation {start_gen}")
         except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
             logger.warning(f"Could not load checkpoint, starting fresh: {e}")
@@ -135,8 +142,7 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
             break
 
     best_strat, best_score = population.best()
-    if had_success:
-        checkpoint.save(population.to_dict(), gen, rng, run_dir)
+    checkpoint.save(population.to_dict(), gen, rng, run_dir)
     generations_completed = (last_gen_run + 1) if last_gen_run >= 0 else start_gen
     recorder.write_summary(best_strat, best_score, generations_completed)
     logger.info(f"Run complete. Best score: {best_score:.2f}, strategy: {best_strat.name}")
