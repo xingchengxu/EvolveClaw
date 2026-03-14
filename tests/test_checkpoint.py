@@ -17,7 +17,7 @@ def test_save_load_roundtrip(tmp_path):
         ],
     }
     save(population_data, generation=7, rng=rng, run_dir=str(tmp_path))
-    loaded_pop, loaded_gen, loaded_rng_state = load(str(tmp_path), generation=7)
+    loaded_pop, loaded_gen, loaded_rng_state, loaded_extra = load(str(tmp_path), generation=7)
     assert loaded_gen == 7
     assert loaded_pop["max_size"] == 5
     assert len(loaded_pop["members"]) == 2
@@ -31,7 +31,7 @@ def test_load_latest(tmp_path):
     pop = {"max_size": 3, "members": []}
     save(pop, generation=5, rng=rng, run_dir=str(tmp_path))
     save(pop, generation=10, rng=rng, run_dir=str(tmp_path))
-    _, loaded_gen, _ = load(str(tmp_path))
+    _, loaded_gen, _, _ = load(str(tmp_path))
     assert loaded_gen == 10
 
 
@@ -46,7 +46,7 @@ def test_rng_restore_produces_same_sequence(tmp_path):
     # Generate sequence from current rng
     seq_original = rng.random(10).tolist()
     # Restore and generate same sequence
-    _, _, rng_state = load(str(tmp_path), generation=0)
+    _, _, rng_state, _ = load(str(tmp_path), generation=0)
     restored_rng = restore_rng(rng_state)
     seq_restored = restored_rng.random(10).tolist()
     assert seq_original == seq_restored
