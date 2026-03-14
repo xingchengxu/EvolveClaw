@@ -13,6 +13,8 @@ The name combines **Evolve** (the evolutionary search core from AlphaEvolve) wit
 
 This project is deliberately small and transparent. It is designed for learning, not for breaking records.
 
+**This is not a benchmark or record-setting system.** It is an educational implementation meant to make the AlphaEvolve-style workflow understandable and easy to inspect.
+
 ## Who This Is For
 
 - Readers who want a small, inspectable AlphaEvolve-style system they can actually understand end-to-end.
@@ -205,6 +207,11 @@ pip install -r requirements.txt
 pip install -e ".[llm]"
 ```
 
+Use the shortest path that matches what you want to do:
+
+- `pip install -r requirements.txt` or `pip install -e ".[dev]"` if you only want the random-mutation path and local tests.
+- `pip install -e ".[llm]"` or `pip install -e ".[dev,llm]"` if you want real Anthropic/OpenAI calls.
+
 Set your API key for the provider you want to use:
 
 ```bash
@@ -226,6 +233,12 @@ python -m pytest -q
 ```
 
 ### Run the Demo
+
+Quick path:
+
+1. Install dependencies.
+2. Run either the random demo or the LLM demo.
+3. Inspect the run artifacts to confirm whether the LLM path was actually used.
 
 ```bash
 # Random mutation proposer (no LLM needed)
@@ -253,6 +266,12 @@ bash scripts/run_demo.sh
 
 On Windows PowerShell, prefer the explicit `python -m evolveclaw_ramsey.cli run ...` commands above.
 
+After the run finishes, replay it to inspect the output directory and score history:
+
+```bash
+python -m evolveclaw_ramsey.cli replay <run_dir>
+```
+
 ### View Results
 
 Results are written to the `runs/` directory. Each run produces:
@@ -275,6 +294,18 @@ Example `log.jsonl` record:
 
 ```json
 {"generation": 12, "score": 8.0, "strategy_name": "cyclic", "proposer_source": "llm"}
+```
+
+Example failed record showing fallback provenance:
+
+```json
+{"generation": 13, "error": "Timeout", "proposer_source": "llm_fallback"}
+```
+
+Example `best.json` snippet:
+
+```json
+{"generation": 12, "score": 8.0, "violation_count": 9, "proposer_source": "llm"}
 ```
 
 ### Replay & Visualize
