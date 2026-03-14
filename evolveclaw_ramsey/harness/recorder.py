@@ -40,9 +40,12 @@ class Recorder:
             f.write(json.dumps(record) + "\n")
         if self._best_score is None or score_result.score > self._best_score:
             self._best_score = score_result.score
+            best_data = {"generation": gen, "strategy": strategy.to_dict(),
+                        "score": score_result.score, "violation_count": score_result.violation_count}
+            if extra and "proposer_source" in extra:
+                best_data["proposer_source"] = extra["proposer_source"]
             with open(self._best_path, "w") as f:
-                json.dump({"generation": gen, "strategy": strategy.to_dict(),
-                          "score": score_result.score, "violation_count": score_result.violation_count}, f, indent=2)
+                json.dump(best_data, f, indent=2)
 
     def log_error(self, gen: int, error: str) -> None:
         record = {"generation": gen, "error": error}

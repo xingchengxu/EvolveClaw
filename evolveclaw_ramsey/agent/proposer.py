@@ -119,9 +119,6 @@ class LLMProposer(Proposer):
         try:
             response_text = self._provider.call(prompt)
             self._consecutive_failures = 0
-            self._llm_success_count += 1
-            self.last_source = "llm"
-            return self._parse_response(response_text)
         except Exception as e:
             self._consecutive_failures += 1
             self._llm_failure_count += 1
@@ -134,6 +131,16 @@ class LLMProposer(Proposer):
                     "It will continue to fall back to random mutation silently. "
                     "Check your API key, SDK installation, and provider configuration."
                 )
+            return self._fallback.propose(parents, scores, problem, last_error=last_error)
+        try:
+            result = self._parse_response(response_text)
+            self._llm_success_count += 1
+            self.last_source = "llm"
+            return result
+        except Exception as e:
+            self._llm_failure_count += 1
+            self.last_source = "llm_fallback"
+            logger.warning(f"LLM response parse failed, falling back to random: {e}")
             return self._fallback.propose(parents, scores, problem, last_error=last_error)
 
     def _build_prompt(self, parents, scores, problem, last_error=None):
