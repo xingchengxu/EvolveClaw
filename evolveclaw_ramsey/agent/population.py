@@ -55,6 +55,13 @@ class Population:
         """Return the number of distinct individuals (by params_key)."""
         return len(self._seen_keys)
 
+    def type_counts(self) -> dict[str, int]:
+        """Return count of each strategy type in the population."""
+        counts: dict[str, int] = {}
+        for s, _ in self._members:
+            counts[s.name] = counts.get(s.name, 0) + 1
+        return counts
+
     def to_dict(self) -> dict:
         return {
             "max_size": self.max_size,

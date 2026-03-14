@@ -17,7 +17,7 @@ from evolveclaw_ramsey.utils.logging import setup_logging, get_logger
 
 @dataclass
 class RunResult:
-    best_strategy: Strategy
+    best_strategy: Strategy | None
     best_score: float
     run_dir: str
     generations_completed: int
@@ -85,6 +85,11 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
         initialize_population(population, config, evaluator, rng)
         logger.info(f"Population initialized with {population.size()} members")
 
+    if population.size() == 0:
+        logger.error("Population is empty after initialization — all candidates failed. Aborting.")
+        recorder.write_summary(None, 0.0, 0)
+        return RunResult(best_strategy=None, best_score=0.0, run_dir=run_dir, generations_completed=0)
+
     best_strat, best_score = population.best()
     logger.info(f"Initial best: score={best_score:.2f}, strategy={best_strat.name}")
 
@@ -94,10 +99,12 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
     ckpt_interval = config["evolution"]["checkpoint_interval"]
 
     gen = start_gen
+    last_gen_run = -1  # tracks the last generation that entered the loop
     last_error = None
-    ran_any = False
+    had_success = False  # tracks whether any candidate was successfully scored
     run_stats = RunStats()
     for gen in range(start_gen, max_gen):
+        last_gen_run = gen
         parent, parent_score = population.tournament_select(tournament_k, rng)
         candidate = proposer.propose([parent], [parent_score], config["problem"], last_error=last_error)
         exec_result = executor.execute(candidate, n)
@@ -107,10 +114,10 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
             logger.debug(f"Gen {gen}: execution error: {exec_result.error}")
             continue
         last_error = None
-        ran_any = True
+        had_success = True
         score_result = scorer.score(exec_result.graph)
         added = population.add(candidate, score_result.score)
-        gen_stats = run_stats.record(gen, population.scores(), population.strategy_names(), unique_count=population.unique_count())
+        gen_stats = run_stats.record(gen, population.scores(), population.type_counts())
         recorder.log_generation(gen, candidate, score_result, added, extra=run_stats.to_dict())
         current_best_strat, current_best_score = population.best()
         if score_result.score > best_score:
@@ -126,9 +133,9 @@ def run_evolution(config, resume_dir=None, config_stem: str = "run"):
             break
 
     best_strat, best_score = population.best()
-    if ran_any:
+    if had_success:
         checkpoint.save(population.to_dict(), gen, rng, run_dir)
-    generations_completed = (gen + 1) if ran_any else start_gen
+    generations_completed = (last_gen_run + 1) if last_gen_run >= 0 else start_gen
     recorder.write_summary(best_strat, best_score, generations_completed)
     logger.info(f"Run complete. Best score: {best_score:.2f}, strategy: {best_strat.name}")
     return RunResult(best_strategy=best_strat, best_score=best_score, run_dir=run_dir, generations_completed=generations_completed)

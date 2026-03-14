@@ -49,9 +49,11 @@ class Recorder:
         with open(self._log_path, "a") as f:
             f.write(json.dumps(record) + "\n")
 
-    def write_summary(self, best_strategy: Strategy, best_score: float, generations: int) -> None:
+    def write_summary(self, best_strategy: Strategy | None, best_score: float, generations: int) -> None:
+        strat_name = best_strategy.name if best_strategy else "none"
+        strat_params = best_strategy.to_dict() if best_strategy else {}
         summary = (f"EvolveClaw-Ramsey Run Summary\n{'=' * 40}\n"
                   f"Generations completed: {generations}\nBest score: {best_score}\n"
-                  f"Best strategy: {best_strategy.name}\nBest strategy params: {best_strategy.to_dict()}\n")
+                  f"Best strategy: {strat_name}\nBest strategy params: {strat_params}\n")
         with open(self.run_dir / "summary.txt", "w") as f:
             f.write(summary)

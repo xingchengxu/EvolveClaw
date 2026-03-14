@@ -9,9 +9,9 @@ class GenerationStats:
     generation: int
     best_score: float
     mean_score: float
-    unique_strategies: int
+    strategy_type_count: int  # number of distinct strategy types (random, paley, cyclic, perturbed)
     population_size: int
-    diversity_ratio: float  # unique_strategies / population_size
+    type_diversity: float  # strategy_type_count / population_size
 
 
 class RunStats:
@@ -21,17 +21,17 @@ class RunStats:
         self.history: list[GenerationStats] = []
 
     def record(self, generation: int, scores: list[float],
-               strategy_names: list[str], unique_count: int | None = None) -> GenerationStats:
+               type_counts: dict[str, int]) -> GenerationStats:
         """Record stats for one generation."""
         best = max(scores) if scores else 0.0
         mean = sum(scores) / len(scores) if scores else 0.0
-        unique = unique_count if unique_count is not None else len(set(strategy_names))
         pop_size = len(scores)
-        diversity = unique / pop_size if pop_size > 0 else 0.0
+        n_types = len(type_counts)
+        diversity = n_types / pop_size if pop_size > 0 else 0.0
         stats = GenerationStats(
             generation=generation, best_score=best, mean_score=mean,
-            unique_strategies=unique, population_size=pop_size,
-            diversity_ratio=diversity,
+            strategy_type_count=n_types, population_size=pop_size,
+            type_diversity=diversity,
         )
         self.history.append(stats)
         return stats
@@ -44,8 +44,8 @@ class RunStats:
         return {
             "best_score": latest.best_score,
             "mean_score": round(latest.mean_score, 4),
-            "unique_strategies": latest.unique_strategies,
-            "diversity_ratio": round(latest.diversity_ratio, 4),
+            "strategy_type_count": latest.strategy_type_count,
+            "type_diversity": round(latest.type_diversity, 4),
         }
 
     def convergence_summary(self) -> dict:
@@ -65,7 +65,7 @@ class RunStats:
             "initial_best_score": best_scores[0],
             "improvement_count": len(improvement_gens),
             "last_improvement_gen": improvement_gens[-1] if improvement_gens else 0,
-            "mean_diversity": round(
-                sum(s.diversity_ratio for s in self.history) / len(self.history), 4
+            "mean_type_diversity": round(
+                sum(s.type_diversity for s in self.history) / len(self.history), 4
             ),
         }
