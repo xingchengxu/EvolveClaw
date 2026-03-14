@@ -56,14 +56,19 @@ class AnthropicProvider(LLMProvider):
     def __init__(self, model: str, api_key: str):
         if not api_key or not api_key.strip():
             raise ValueError("AnthropicProvider requires a non-empty API key")
+        try:
+            import anthropic
+        except ImportError:
+            raise ImportError(
+                "The 'anthropic' package is required for AnthropicProvider. "
+                "Install it with: pip install -e \".[llm]\" or pip install anthropic"
+            )
         self.model = model
-        self.api_key = api_key
+        self._client = anthropic.Anthropic(api_key=api_key)
 
     def call(self, prompt: str, max_tokens: int = 500) -> str:
-        import anthropic
-        client = anthropic.Anthropic(api_key=self.api_key)
-        message = client.messages.create(model=self.model, max_tokens=max_tokens,
-                                         messages=[{"role": "user", "content": prompt}])
+        message = self._client.messages.create(model=self.model, max_tokens=max_tokens,
+                                               messages=[{"role": "user", "content": prompt}])
         return message.content[0].text
 
 
@@ -71,14 +76,19 @@ class OpenAIProvider(LLMProvider):
     def __init__(self, model: str, api_key: str):
         if not api_key or not api_key.strip():
             raise ValueError("OpenAIProvider requires a non-empty API key")
+        try:
+            import openai
+        except ImportError:
+            raise ImportError(
+                "The 'openai' package is required for OpenAIProvider. "
+                "Install it with: pip install -e \".[llm]\" or pip install openai"
+            )
         self.model = model
-        self.api_key = api_key
+        self._client = openai.OpenAI(api_key=api_key)
 
     def call(self, prompt: str, max_tokens: int = 500) -> str:
-        import openai
-        client = openai.OpenAI(api_key=self.api_key)
-        response = client.chat.completions.create(model=self.model, max_tokens=max_tokens,
-                                                  messages=[{"role": "user", "content": prompt}])
+        response = self._client.chat.completions.create(model=self.model, max_tokens=max_tokens,
+                                                        messages=[{"role": "user", "content": prompt}])
         return response.choices[0].message.content
 
 

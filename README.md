@@ -98,6 +98,20 @@ Or using requirements.txt:
 pip install -r requirements.txt
 ```
 
+To use the LLM proposer (optional), also install the LLM dependencies and set your API key:
+
+```bash
+pip install -e ".[llm]"
+
+# For Anthropic (default):
+export ANTHROPIC_API_KEY=your-key-here
+
+# For OpenAI:
+export OPENAI_API_KEY=your-key-here
+```
+
+Without the LLM extra, configuring `type: llm` will fail at startup with a clear error message.
+
 ### Run Tests
 
 ```bash
