@@ -44,12 +44,15 @@ class Executor:
             if proc.is_alive():
                 proc.kill()
                 proc.join(timeout=1.0)
+            proc.close()
             return ExecutionResult(graph=None, elapsed_seconds=elapsed, error="Timeout")
 
         if result_queue.empty():
+            proc.close()
             return ExecutionResult(graph=None, elapsed_seconds=elapsed, error="Process died without result")
 
         status, payload = result_queue.get_nowait()
+        proc.close()
         if status == "error":
             return ExecutionResult(graph=None, elapsed_seconds=elapsed, error=payload)
 
