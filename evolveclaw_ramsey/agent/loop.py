@@ -46,10 +46,10 @@ def initialize_population(population, config, evaluator, rng):
         if result.error is None and result.score_result is not None:
             population.add(strategy, result.score_result.score)
 
-def run_evolution(config, resume_dir=None):
+def run_evolution(config, resume_dir=None, config_stem: str = "run"):
     seed = config.get("seed", 42)
     rng = np.random.default_rng(seed)
-    run_dir = resume_dir or _make_run_dir(config.get("run_dir", "runs/"))
+    run_dir = resume_dir or _make_run_dir(config.get("run_dir", "runs/"), config_stem)
     setup_logging(level=config.get("logging", {}).get("level", "INFO"), run_dir=run_dir)
     logger = get_logger()
 

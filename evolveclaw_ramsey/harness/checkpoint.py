@@ -21,7 +21,8 @@ def load(run_dir: str, generation: int | None = None) -> tuple[dict, int, dict]:
     if generation is not None:
         path = ckpt_dir / f"gen_{generation}.json"
     else:
-        files = sorted(ckpt_dir.glob("gen_*.json"))
+        files = sorted(ckpt_dir.glob("gen_*.json"),
+                       key=lambda p: int(p.stem.split("_")[1]))
         if not files:
             raise FileNotFoundError(f"No checkpoint files in {ckpt_dir}")
         path = files[-1]
@@ -48,9 +49,18 @@ def _make_serializable(obj):
         return [_make_serializable(v) for v in obj]
     return obj
 
-def _restore_state(obj):
+def _restore_state(obj, key=None):
+    """Restore numpy types from JSON-deserialized data.
+
+    Converts lists under known RNG state keys back to np.ndarray.
+    """
+    # Known keys in PCG64 state that should be numpy arrays
+    _ARRAY_KEYS = {"s", "state"}
     if isinstance(obj, dict):
-        return {k: _restore_state(v) for k, v in obj.items()}
+        return {k: _restore_state(v, key=k) for k, v in obj.items()}
     elif isinstance(obj, list):
+        # If parent key suggests this should be an array, convert it
+        if key in _ARRAY_KEYS:
+            return np.array(obj)
         return [_restore_state(v) for v in obj]
     return obj

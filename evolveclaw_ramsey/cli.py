@@ -15,7 +15,8 @@ from evolveclaw_ramsey.utils.config import load_config
 def cmd_run(args):
     config = load_config(args.config)
     resume_dir = args.resume if args.resume else None
-    result = run_evolution(config, resume_dir=resume_dir)
+    config_stem = Path(args.config).stem
+    result = run_evolution(config, resume_dir=resume_dir, config_stem=config_stem)
     print(f"\nRun complete: {result.run_dir}")
     print(f"Best score: {result.best_score:.2f}")
     print(f"Best strategy: {result.best_strategy.name}")

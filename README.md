@@ -23,7 +23,7 @@ AlphaEvolve showed that LLMs can act as mutation operators in an evolutionary lo
 EvolveClaw-Ramsey distills this into its simplest useful form:
 
 - **Strategy objects** replace AlphaEvolve's evolved programs. Each strategy is a callable that decides how to color edges of a complete graph K_n.
-- **Mutation operators** (random perturbation, degree-biased flips, block swaps) stand in for LLM-proposed code diffs.
+- **Mutation operators** (random parameter perturbation, strategy type switching, edge flipping via PerturbedStrategy) stand in for LLM-proposed code diffs.
 - **A synchronous evolution loop** replaces AlphaEvolve's async pipeline with a straightforward generate-evaluate-select cycle.
 - **Violation-counting scorer** provides the fitness signal: fewer monochromatic s-cliques and t-cliques means a better coloring.
 
@@ -120,7 +120,7 @@ evolveclaw_ramsey/
     __init__.py
     graph_repr.py            # Adjacency matrix coloring representation
     scoring.py               # Monochromatic clique violation counter
-    strategies.py            # Coloring strategies (random, degree-biased, etc.)
+    strategies.py            # Coloring strategies (Random, Paley, Cyclic, Perturbed)
   agent/
     __init__.py
     population.py            # Ranked population management
@@ -166,17 +166,17 @@ The scorer counts **monochromatic cliques**: for a target R(s, t), it counts the
 The fitness function is:
 
 ```
-score = -(violations_color0 + penalty_weight * violations_color1)
+score = n - violations * penalty_weight
 ```
 
-Lower (more negative) scores are worse; a score of 0 means a valid Ramsey counter-example was found.
+where `violations = count_cliques(G, s) + count_cliques(complement(G), t)`. Higher scores are better; a perfect score of `n` (the graph size) means zero violations and a valid Ramsey counter-example was found.
 
 ### Evolution Loop
 
 1. **Initialize** a population of random strategy objects.
 2. **Evaluate** each candidate by executing its strategy and scoring the resulting coloring.
 3. **Select** parents via tournament selection (pick `k` candidates, take the best).
-4. **Mutate** selected parents to produce offspring (random edge flips, degree-biased perturbations, block swaps).
+4. **Mutate** selected parents to produce offspring (parameter perturbation, strategy type switching, or edge flipping).
 5. **Replace** the worst members of the population with better offspring.
 6. **Repeat** for `max_generations` or until a zero-violation coloring is found.
 
