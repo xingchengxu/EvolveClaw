@@ -1,0 +1,23 @@
+problem:
+  s: 4
+  t: 4
+  n: 17
+  penalty_weight: 1.0
+
+evolution:
+  max_generations: 100
+  population_size: 20
+  tournament_k: 3
+  checkpoint_interval: 10
+
+proposer:
+  type: random
+
+executor:
+  timeout_seconds: 10
+
+logging:
+  level: INFO
+
+seed: 42
+run_dir: runs/

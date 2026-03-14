@@ -1,0 +1,26 @@
+problem:
+  s: 4
+  t: 4
+  n: 17
+  penalty_weight: 1.0
+
+evolution:
+  max_generations: 50
+  population_size: 20
+  tournament_k: 3
+  checkpoint_interval: 10
+
+proposer:
+  type: llm
+  llm_provider: anthropic
+  llm_model: claude-sonnet-4-20250514
+  llm_api_key_env: ANTHROPIC_API_KEY
+
+executor:
+  timeout_seconds: 10
+
+logging:
+  level: INFO
+
+seed: 42
+run_dir: runs/
